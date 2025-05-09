@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+
+    "rootDir": "./tenant",
+
+    "outDir": "./compiled-migrations",
+    "declaration": false,
+    "sourceMap": false,
+    "incremental": false
+  },
+
+  "include": ["./tenant/**/*.ts"],
+  "exclude": ["../node_modules", "../dist", "../coverage"]
+}

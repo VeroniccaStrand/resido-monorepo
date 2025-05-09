@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package resido;
+
+
+service TenantService {
+
+  rpc CreateTenant (CreateTenantRequest) returns (TenantResponse) {}
+  
+
+  rpc GetTenantById (GetTenantByIdRequest) returns (TenantResponse) {}
+  
+
+  rpc GetTenantBySchemaName (GetTenantBySchemaNameRequest) returns (TenantResponse) {}
+  
+
+  rpc GetAllTenants (GetAllTenantsRequest) returns (TenantsResponse) {}
+  
+
+  rpc ActivateTenant (TenantIdRequest) returns (TenantResponse) {}
+
+  rpc DeactivateTenant (TenantIdRequest) returns (TenantResponse) {}
+
+  rpc UpdateContactInfo (UpdateContactInfoRequest) returns (TenantResponse) {}
+}
+
+
+message CreateTenantRequest {
+  string name = 1;
+  string contact_email = 2;
+  
+}
+
+
+message TenantIdRequest {
+  string id = 1;
+}
+
+
+message GetTenantByIdRequest {
+  string id = 1;
+}
+
+
+message GetTenantBySchemaNameRequest {
+  string schema_name = 1;
+}
+
+
+message GetAllTenantsRequest {
+}
+
+
+message UpdateContactInfoRequest {
+  string id = 1;
+  string contact_email = 2;
+  string contact_phone = 3;
+}
+
+
+message TenantResponse {
+  string id = 1;
+  string name = 2;
+  string schema_name = 3;
+  string contact_email = 4;
+  string contact_phone = 5;
+  bool is_active = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  string activationToken = 9; 
+}
+
+
+message TenantsResponse {
+  repeated TenantResponse tenants = 1;
+}
+
+
+
+service UserService {
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc GetUserById (UserIdRequest) returns (UserResponse);
+  rpc UpdateUserInfo (UpdateUserInfoRequest) returns (UserResponse);
+  rpc ChangePassword (ChangePasswordRequest) returns (Empty);
+  rpc ActivateUser (UserIdRequest) returns (UserResponse);
+  rpc DeactivateUser (UserIdRequest) returns (UserResponse);
+  rpc RecordUserLogin (UserIdRequest) returns (UserResponse);
+    rpc RegisterWithToken (RegisterWithTokenRequest) returns (UserResponse);
+}
+
+message RegisterWithTokenRequest {
+  string activation_token = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string password = 5;
+  string phone = 6;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string firstName = 2;
+  string lastName = 3;
+  string password = 4;
+  string phone = 5;
+
+}
+
+message UserIdRequest {
+  string id = 1;
+}
+
+message UpdateUserInfoRequest {
+  string id = 1;
+  string firstName = 2;
+  string lastName = 3;
+  string phone = 4;
+}
+
+message ChangePasswordRequest {
+  string id = 1;
+  string currentPassword = 2;
+  string newPassword = 3;
+}
+
+message UserResponse {
+  string id = 1;
+  string email = 2;
+  string firstName = 3;
+  string lastName = 4;
+  string phone = 5;
+  bool isActive = 6;
+  string createdAt = 7;
+  string updatedAt = 8;
+}
+
+message Empty {}
+
+service TokenService {
+  rpc CreateUserToken (CreateTokenRequest) returns (TokenResponse);
+  rpc ValidateToken (ValidateTokenRequest) returns (TokenValidationResponse);
+  rpc UseToken (UseTokenRequest) returns (UseTokenResponse);
+}
+
+message CreateTokenRequest {
+  string schemaName = 1;
+  string email = 2;
+}
+
+message TokenResponse {
+  string token = 1;
+  string expiresAt = 2;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message TokenValidationResponse {
+  bool valid = 1;
+  string schemaName = 2;
+  string email = 3;
+  string tokenType = 4;
+}
+
+message UseTokenRequest {
+  string token = 1;
+}
+
+message UseTokenResponse {
+  bool success = 1;
+}
