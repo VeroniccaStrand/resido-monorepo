@@ -10,12 +10,14 @@ import { UserRepository } from './infrastructure/user.repository';
 import { UserFactory } from './infrastructure/user.factory';
 import { PasswordService } from './password.service';
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly userFactory: UserFactory,
+    private readonly eventEmitter: EventEmitter2,
     private readonly passwordService: PasswordService,
     private readonly logger: LoggerService,
   ) {
@@ -28,6 +30,7 @@ export class UserService {
     lastName: string;
     password: string;
     phone?: string;
+    schemaName: string;
   }): Promise<User> {
     try {
       this.logger.log(`Creating user with email: ${data.email}`);
@@ -60,6 +63,13 @@ export class UserService {
       const createdUser = await this.userRepository.create(user, passwordHash);
 
       this.logger.log(`User created: ${createdUser.email}`);
+
+      this.eventEmitter.emit('user.created', {
+        userId: user.id,
+        email: user.email,
+        schemaName: data.schemaName,
+      });
+      this.logger.log(`Emitted user.created for ${user.email}`);
 
       return createdUser;
     } catch (error) {

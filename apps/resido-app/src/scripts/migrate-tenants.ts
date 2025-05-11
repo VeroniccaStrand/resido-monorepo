@@ -1,4 +1,3 @@
-// apps/resido-app/src/scripts/migrate-tenants.ts
 import 'reflect-metadata';
 import 'ts-node/register';
 import { MikroORM } from '@mikro-orm/core';

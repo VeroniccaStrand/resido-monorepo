@@ -103,6 +103,7 @@ message CreateUserRequest {
   string lastName = 3;
   string password = 4;
   string phone = 5;
+  string schemaName = 6;
 
 }
 
@@ -169,4 +170,16 @@ message UseTokenRequest {
 
 message UseTokenResponse {
   bool success = 1;
+}
+
+service UserTenantMapperService {
+  rpc GetSchemaByEmail (GetSchemaByEmailRequest) returns (UserTenantMapperResponse);
+}
+
+message GetSchemaByEmailRequest {
+  string email = 1;
+}
+
+message UserTenantMapperResponse {
+  string schema_name = 1;
 }

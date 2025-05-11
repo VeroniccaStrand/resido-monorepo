@@ -3,6 +3,8 @@ import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { TenantEntity } from '../tenant/infrastructure/tenant.entity';
 import { TokenEntity } from '../token/infrastructure/token.entity';
 
+import { UserTenantMapperEntity } from '../user-tenant-mapper/infrastructure/user-tenant-mapper.entity';
+
 const publicConfig: Options = {
   driver: PostgreSqlDriver,
   user: process.env.DB_USER || 'strand',
@@ -11,7 +13,7 @@ const publicConfig: Options = {
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   dbName: process.env.DB_NAME || 'resido',
 
-  entities: [TenantEntity, TokenEntity],
+  entities: [TenantEntity, TokenEntity, UserTenantMapperEntity],
   schema: 'public',
   migrations: {
     path: './migrations/public',

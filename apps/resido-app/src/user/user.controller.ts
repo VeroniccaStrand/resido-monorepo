@@ -12,6 +12,7 @@ import {
 
 import { UserService } from './user.service';
 import { UserMapper } from './infrastructure/user.mapper';
+import { Metadata } from '@grpc/grpc-js';
 
 @Controller()
 export class UserController {
@@ -21,13 +22,23 @@ export class UserController {
   ) {}
 
   @GrpcMethod('UserService', 'CreateUser')
-  async createUser(request: CreateUserRequest): Promise<UserResponse> {
+  async createUser(
+    request: CreateUserRequest,
+    metadata: Metadata,
+  ): Promise<UserResponse> {
+    const schemaArr = metadata.get('schema-name');
+    const schemaName =
+      Array.isArray(schemaArr) && schemaArr.length
+        ? String(schemaArr[0])
+        : 'public';
+
     const user = await this.userService.createUser({
       email: request.email,
       firstName: request.firstName,
       lastName: request.lastName,
       password: request.password,
       phone: request.phone,
+      schemaName,
     });
 
     return this.userMapper.toResponse(user);

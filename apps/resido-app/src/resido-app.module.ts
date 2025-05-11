@@ -17,9 +17,12 @@ import { TokenModule } from './token/token.module';
 import { TenancyModule } from './tenancy/tenancy.module';
 import publicConfig from './config/mikro-orm-public.config';
 import tenantConfig from './config/mikro-orm-tenant.config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { UserTenantMapperModule } from './user-tenant-mapper/user-tenant-mapper.module';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     SharedModule,
 
     MikroOrmModule.forRoot({
@@ -37,6 +40,7 @@ import tenantConfig from './config/mikro-orm-tenant.config';
     AuthModule,
     TokenModule,
     TenancyModule,
+    UserTenantMapperModule,
   ],
   controllers: [ResidoAppController],
   providers: [

@@ -67,6 +67,7 @@ export interface CreateUserRequest {
   lastName: string;
   password: string;
   phone: string;
+  schemaName: string;
 }
 
 export interface UserIdRequest {
@@ -127,6 +128,14 @@ export interface UseTokenRequest {
 
 export interface UseTokenResponse {
   success: boolean;
+}
+
+export interface GetSchemaByEmailRequest {
+  email: string;
+}
+
+export interface UserTenantMapperResponse {
+  schemaName: string;
 }
 
 export const RESIDO_PACKAGE_NAME = "resido";
@@ -290,3 +299,30 @@ export function TokenServiceControllerMethods() {
 }
 
 export const TOKEN_SERVICE_NAME = "TokenService";
+
+export interface UserTenantMapperServiceClient {
+  getSchemaByEmail(request: GetSchemaByEmailRequest): Observable<UserTenantMapperResponse>;
+}
+
+export interface UserTenantMapperServiceController {
+  getSchemaByEmail(
+    request: GetSchemaByEmailRequest,
+  ): Promise<UserTenantMapperResponse> | Observable<UserTenantMapperResponse> | UserTenantMapperResponse;
+}
+
+export function UserTenantMapperServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["getSchemaByEmail"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("UserTenantMapperService", method)(constructor.prototype[method], method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("UserTenantMapperService", method)(constructor.prototype[method], method, descriptor);
+    }
+  };
+}
+
+export const USER_TENANT_MAPPER_SERVICE_NAME = "UserTenantMapperService";

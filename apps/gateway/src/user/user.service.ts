@@ -55,7 +55,6 @@ export class UserService implements OnModuleInit {
       `Sending createUser gRPC request for ${data.email} in schema ${schemaName}`,
     );
 
-    // Skapa en korrekt Metadata-instans istället för ett vanligt objekt
     const metadata = new Metadata();
     metadata.add('schema-name', schemaName);
 
