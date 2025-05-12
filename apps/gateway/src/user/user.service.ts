@@ -72,7 +72,6 @@ export class UserService implements OnModuleInit {
 
     const customRequest = { ...this.request, schemaName };
 
-    // Skapa en temporär client med rätt schema
     const tempUserService = this.grpcClientFactory.create<UserServiceClient>(
       this.client,
       'UserService',
@@ -99,8 +98,6 @@ export class UserService implements OnModuleInit {
     }
   }
 
-  // För alla andra metoder använder vi den vanliga this.userService som
-  // automatiskt får schemaName från request-objektet via GrpcClientFactory
   async getUserById(data: UserIdRequest): Promise<UserResponse> {
     this.logger.debug(`Sending getUserById gRPC request for ID: ${data.id}`);
 
@@ -109,7 +106,6 @@ export class UserService implements OnModuleInit {
       this.logger.debug(`Received getUserById gRPC response`);
       return response;
     } catch (error: unknown) {
-      // Resten är oförändrat...
       const errorInfo = getErrorInfo(error);
       this.logger.error(
         `gRPC getUserById error: ${errorInfo.message}`,

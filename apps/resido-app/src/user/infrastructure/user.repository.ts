@@ -16,7 +16,6 @@ export class UserRepository {
   }
 
   async create(user: User, passwordHash: string): Promise<User> {
-    // Här används runWithCurrentSchema som automatiskt hämtar schema från AsyncLocalStorage
     return this.tenantConnectionManager.runWithCurrentSchema(async (em) => {
       const entity = this.mapper.toEntity(user);
       entity.passwordHash = passwordHash;

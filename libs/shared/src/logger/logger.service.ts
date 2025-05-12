@@ -38,13 +38,9 @@ export class LoggerService implements NestLoggerService {
       'development',
     );
 
-    // Konfigurera min-prioritet baserat på miljö
     this.minPriority =
-      this.environment === 'production'
-        ? LogPriority.P1 // I produktion, visa bara P0 och P1 varningar
-        : LogPriority.P3; // I utveckling, visa alla
+      this.environment === 'production' ? LogPriority.P1 : LogPriority.P3;
 
-    // Initiera filloggning om vi är i produktion
     if (this.environment === 'production') {
       this.initializeFileLogging();
     }
@@ -87,7 +83,6 @@ export class LoggerService implements NestLoggerService {
     priority: LogPriority = LogPriority.P2,
     metadata?: LogMetadata,
   ): void {
-    // Kontrollera om prioriteten är tillräckligt hög för miljön
     if (this.shouldLogPriority(priority)) {
       this.logger.warn(
         this.formatMessage(message, metadata),
@@ -106,14 +101,12 @@ export class LoggerService implements NestLoggerService {
   }
 
   debug(message: string, metadata?: LogMetadata): void {
-    // Logga bara debug i utvecklingsmiljö
     if (this.environment !== 'production') {
       this.logger.debug(this.formatMessage(message, metadata), this.logContext);
     }
   }
 
   verbose(message: string, metadata?: LogMetadata): void {
-    // Logga bara verbose i utvecklingsmiljö
     if (this.environment !== 'production') {
       this.logger.verbose(
         this.formatMessage(message, metadata),
@@ -122,7 +115,6 @@ export class LoggerService implements NestLoggerService {
     }
   }
 
-  // Hjälpmetod för att kontrollera om prioriteten ska loggas
   private shouldLogPriority(priority: LogPriority): boolean {
     const priorityOrder = {
       [LogPriority.P0]: 0,
@@ -134,19 +126,15 @@ export class LoggerService implements NestLoggerService {
     return priorityOrder[priority] <= priorityOrder[this.minPriority];
   }
 
-  // Initiera filloggning med Winston
   private initializeFileLogging(): void {
     try {
-      // Säkerställ att loggmappen finns
       const logDir = this.configService.get<string>('LOG_DIR', 'logs');
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
       }
 
-      // Skapa transportörer med explicit typning
       const transports: winston.transport[] = [];
 
-      // Definiera options för transportörer
       const fileRotateOptions: DailyRotateFileTransportOptions = {
         filename: path.join(logDir, 'application-%DATE%.log'),
         datePattern: 'YYYY-MM-DD',
@@ -175,7 +163,6 @@ export class LoggerService implements NestLoggerService {
       transports.push(transport1);
       transports.push(transport2);
 
-      // Skapa Winston-logger
       this.winstonLogger = winston.createLogger({
         level: 'info',
         format: winston.format.combine(
@@ -188,7 +175,6 @@ export class LoggerService implements NestLoggerService {
         transports,
       });
 
-      // Lägg till konsoltransport i icke-produktionsmiljöer för enklare felsökning
       if (this.environment !== 'production') {
         this.winstonLogger.add(
           new winston.transports.Console({
@@ -200,12 +186,10 @@ export class LoggerService implements NestLoggerService {
         );
       }
     } catch (error) {
-      // Fånga eventuella fel vid initiering av logger
       this.logger.error('Failed to initialize file logging', String(error));
     }
   }
 
-  // Hjälpmetod för att formatera meddelande med metadata
   private formatMessage(message: string, metadata?: LogMetadata): string {
     if (!metadata || Object.keys(metadata).length === 0) {
       return message;
@@ -227,10 +211,8 @@ export class LoggerService implements NestLoggerService {
           stringValue = '[Complex Object]';
         }
       } else if (typeof value === 'string') {
-        // Om det är en sträng, använd den direkt
         stringValue = value;
       } else {
-        // För andra primitiva typer, använd String-konstruktorn
         // eslint-disable-next-line @typescript-eslint/no-base-to-string
         stringValue = String(value);
       }

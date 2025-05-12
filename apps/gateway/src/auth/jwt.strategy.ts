@@ -1,4 +1,3 @@
-// apps/gateway/src/auth/jwt.strategy.ts
 import { LoggerService } from '@app/shared';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -35,12 +34,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
-    } as any); // Typecasting för att undvika ESLint-felet
+    } as any);
     this.logger.setContext('JwtStrategy');
   }
 
   validate(payload: JwtPayload): UserInfo {
-    // Explicit typning för user-objektet
     const user: UserInfo = {
       userId: payload.sub,
       email: payload.email,
@@ -53,7 +51,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       `JWT validated for user ${payload.email} with schema ${payload.schemaName}`,
     );
 
-    // Detta objekt blir tillgängligt som request.user i alla skyddade endpoints
     return user;
   }
 }

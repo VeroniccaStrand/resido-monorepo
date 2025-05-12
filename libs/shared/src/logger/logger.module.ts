@@ -1,4 +1,3 @@
-// logger.module.ts
 import { Module, Global } from '@nestjs/common';
 import { LoggerService } from './logger.service';
 import { ConfigModule } from '@nestjs/config';

@@ -51,7 +51,6 @@ export class TenantService implements OnModuleInit {
   }
 
   onModuleInit() {
-    // Använd GrpcClientFactory för att få en proxy med schema metadata
     this.tenantService = this.grpcClientFactory.create<TenantServiceClient>(
       this.client,
       'TenantService',
@@ -60,14 +59,12 @@ export class TenantService implements OnModuleInit {
     this.logger.log('TenantService gRPC client initialized');
   }
 
-  // createTenant är public så vi behöver explicit sätta 'public' schema
   async createTenant(data: CreateTenantRequest): Promise<TenantResponse> {
     this.logger.debug(
       `Sending createTenant gRPC request: ${JSON.stringify(data)}`,
     );
 
     try {
-      // Create the tenant - create en temporär klient med 'public' schema
       const publicRequest = { ...this.request, schemaName: 'public' };
       const publicTenantService =
         this.grpcClientFactory.create<TenantServiceClient>(
@@ -80,7 +77,6 @@ export class TenantService implements OnModuleInit {
         publicTenantService.createTenant(data),
       );
 
-      // Now create a token for user creation with the tenant's schema
       if (tenantResponse && tenantResponse.schemaName) {
         try {
           const tokenResponse: TokenResponse =
@@ -89,7 +85,6 @@ export class TenantService implements OnModuleInit {
               data.contactEmail,
             );
 
-          // Add the token to the tenant response
           tenantResponse.activationToken = tokenResponse.token;
 
           this.logger.debug(
@@ -120,8 +115,6 @@ export class TenantService implements OnModuleInit {
     }
   }
 
-  // Resterande metoder använder tenantService med request-objektets schemaName
-  // Inga ändringar behövs i dessa metoder - GrpcClientFactory hanterar schemaName automatiskt
   async getTenantById(data: GetTenantByIdRequest): Promise<TenantResponse> {
     this.logger.debug(`Sending getTenantById gRPC request for ID: ${data.id}`);
 

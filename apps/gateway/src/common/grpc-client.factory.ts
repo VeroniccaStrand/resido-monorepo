@@ -46,7 +46,6 @@ export class GrpcClientFactory {
 
     return new Proxy<T>(service, {
       get: (target: T, prop: string | symbol): any => {
-        // Skip symbol properties or properties not in target
         if (typeof prop !== 'string' || !(prop in target)) {
           return undefined;
         }

@@ -1,6 +1,6 @@
 import { User } from '../domain/user.domain';
 import { UserEntity } from './user.entity';
-import { UserResponse } from '@app/shared/proto-gen/resido'; // Typ från din genererade proto-def
+import { UserResponse } from '@app/shared/proto-gen/resido';
 
 export class UserMapper {
   toDomain(entity: UserEntity): User {

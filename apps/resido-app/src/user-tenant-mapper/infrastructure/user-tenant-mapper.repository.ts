@@ -1,4 +1,3 @@
-// src/user-tenant-mapper/infrastructure/user-tenant-mapper.repository.ts
 import { Injectable } from '@nestjs/common';
 import { LoggerService } from '@app/shared';
 import { TenantConnectionManagerService } from '../../tenancy/tenant-connection-manager.service';
@@ -40,7 +39,6 @@ export class UserTenantMapperRepository {
   async save(mapper: UserTenantMapper): Promise<UserTenantMapper> {
     return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
       if (!mapper.id) {
-        // Vi kan återanvända create-metoden men behöver använda EntityManager från denna kontext
         const entity = this.mapper.toNewEntity(mapper);
         em.persist(entity);
         await em.flush();

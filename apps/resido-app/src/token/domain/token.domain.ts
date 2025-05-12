@@ -50,7 +50,7 @@ export class Token {
 
   private getDefaultExpiry(): Date {
     const now = new Date();
-    // Default to 7 days expiry
+
     return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   }
 
@@ -97,7 +97,6 @@ export class Token {
     return this._updatedAt;
   }
 
-  // Helper methods for specific metadata - now with proper type safety
   getSchemaName(): string | null {
     return this._metadata.schemaName || null;
   }

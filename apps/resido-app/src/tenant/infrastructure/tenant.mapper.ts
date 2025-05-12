@@ -5,7 +5,6 @@ import { TenantResponse } from '@app/shared/proto-gen/resido';
 
 @Injectable()
 export class TenantMapper {
-  // Konvertera från entitet till domänmodell
   toDomain(entity: TenantEntity): Tenant {
     return new Tenant({
       id: entity.id,
@@ -20,7 +19,6 @@ export class TenantMapper {
   }
 
   toResponse(domain: Tenant): TenantResponse {
-    // Om schemaName är undefined, kasta ett fel eftersom det behövs
     if (domain.schemaName === undefined) {
       throw new Error('Schema name is required for response');
     }
@@ -34,7 +32,7 @@ export class TenantMapper {
       isActive: domain.isActive,
       createdAt: domain.createdAt.toISOString(),
       updatedAt: domain.updatedAt.toISOString(),
-      activationToken: '', // Lägg till denna rad
+      activationToken: '',
     };
   }
 
@@ -53,11 +51,9 @@ export class TenantMapper {
     return entity;
   }
 
-  // Uppdatera existerande entitet från domänmodell
   updateEntity(entity: TenantEntity, domain: Tenant): void {
     entity.name = domain.name;
 
-    // Uppdatera bara schemaName om det finns
     if (domain.schemaName) {
       entity.schemaName = domain.schemaName;
     }

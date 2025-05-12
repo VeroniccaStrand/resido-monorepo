@@ -19,19 +19,15 @@ export class LoggingInterceptor implements NestInterceptor {
     let requestInfo: string;
 
     if (contextType === 'http') {
-      // Explicit typning för att undvika eslint-fel
       const httpContext = context.switchToHttp();
       const request = httpContext.getRequest<Request>();
 
-      // Nu är request korrekt typad som Express.Request
       requestInfo = `${request.method} ${request.url}`;
     } else if (contextType === 'rpc') {
-      // För RPC, använd bara klassnamn och metodnamn
       const className = context.getClass().name;
       const handlerName = context.getHandler().name;
       requestInfo = `RPC: ${className}.${handlerName}`;
     } else {
-      // För andra kontexter
       const className = context.getClass().name;
       const handlerName = context.getHandler().name;
       requestInfo = `${className}.${handlerName}`;

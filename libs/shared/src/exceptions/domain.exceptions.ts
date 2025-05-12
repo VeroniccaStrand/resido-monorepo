@@ -1,14 +1,12 @@
-// Bas domain exception
 export class DomainException extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'DomainException';
-    // För att bibehålla proper stack trace med V8-motorn
+
     Object.setPrototypeOf(this, DomainException.prototype);
   }
 }
 
-// Validation exception
 export class ValidationException extends DomainException {
   constructor(
     message: string,
@@ -20,7 +18,6 @@ export class ValidationException extends DomainException {
   }
 }
 
-// Not found exception
 export class NotFoundException extends DomainException {
   constructor(entity: string, id: string | number) {
     super(`${entity} with id ${id} not found`);
@@ -29,7 +26,6 @@ export class NotFoundException extends DomainException {
   }
 }
 
-// Unauthorized exception
 export class UnauthorizedException extends DomainException {
   constructor(message = 'Unauthorized') {
     super(message);
@@ -38,7 +34,6 @@ export class UnauthorizedException extends DomainException {
   }
 }
 
-// Conflict exception
 export class ConflictException extends DomainException {
   constructor(entity: string, field: string, value: string | number) {
     super(`${entity} with ${field} ${value} already exists`);

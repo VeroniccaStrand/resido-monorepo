@@ -1,4 +1,3 @@
-// public-schema.decorator.ts
 import { SetMetadata } from '@nestjs/common';
 
 export const PUBLIC_SCHEMA_KEY = 'public_schema';

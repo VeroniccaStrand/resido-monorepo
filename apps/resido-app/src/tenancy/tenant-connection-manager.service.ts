@@ -13,7 +13,6 @@ import { LoggerService } from '@app/shared';
 import * as genericPool from 'generic-pool';
 import { ConfigService } from '@nestjs/config';
 
-// Skapa AsyncLocalStorage för schema-kontext
 const schemaContextStorage = new AsyncLocalStorage<string>();
 
 interface SchemaConnection {
@@ -65,7 +64,6 @@ export class TenantConnectionManagerService
   ) {
     this.logger.setContext('TenantConnectionManagerService');
 
-    // Konfigurera pool-inställningar från environment
     this.poolConfig = {
       maxSize: this.configService.get<number>('DB_POOL_SIZE', 5),
       minSize: this.configService.get<number>('DB_POOL_MIN_SIZE', 0),
@@ -89,13 +87,11 @@ export class TenantConnectionManagerService
   }
 
   onModuleInit(): void {
-    // Starta pool cleanup när modulen initieras
     this.startPoolCleanup();
     this.logger.log('TenantConnectionManagerService initialized');
   }
 
   async onModuleDestroy(): Promise<void> {
-    // Städa upp alla aktiva pools vid nedstängning
     clearInterval(this.cleanupInterval);
 
     const closePromises = Array.from(this.connectionPools.entries()).map(
@@ -117,10 +113,6 @@ export class TenantConnectionManagerService
     this.logger.log('All connection pools closed');
   }
 
-  /**
-   * Hämta det aktuella schemat från AsyncLocalStorage
-   * Ersätter SchemaConnectionService.getSchemaName()
-   */
   getSchemaName(): string {
     const schema = schemaContextStorage.getStore();
     if (!schema) {
@@ -131,20 +123,12 @@ export class TenantConnectionManagerService
     return schema;
   }
 
-  /**
-   * Kör kod i public schema
-   * Ersätter SchemaConnectionService.runWithPublicSchema()
-   */
   async runWithPublicSchema<T>(
     callback: (em: EntityManager) => Promise<T>,
   ): Promise<T> {
     return this.runInTenantContext('public', callback);
   }
 
-  /**
-   * Kör kod i det aktuella tenant-schemat
-   * Ersätter SchemaConnectionService.runWithTenantSchema()
-   */
   async runWithTenantSchema<T>(
     schemaName: string,
     callback: (em: EntityManager) => Promise<T>,
@@ -152,10 +136,6 @@ export class TenantConnectionManagerService
     return this.runInTenantContext(schemaName, callback);
   }
 
-  /**
-   * Kör kod i det schema som för närvarande är aktivt i AsyncLocalStorage
-   * Ny funktionalitet för att förenkla repository-implementation
-   */
   async runWithCurrentSchema<T>(
     callback: (em: EntityManager) => Promise<T>,
   ): Promise<T> {
@@ -171,7 +151,6 @@ export class TenantConnectionManagerService
         const lastUsedTime = this.poolLastUsedTime.get(schema) || 0;
         const timeSinceLastUse = now - lastUsedTime;
 
-        // Städa bort inaktiva pools som inte använts på länge och inte har aktiva anslutningar
         if (
           timeSinceLastUse > this.poolConfig.inactivityTimeoutMs &&
           pool.borrowed === 0
@@ -199,28 +178,22 @@ export class TenantConnectionManagerService
   private getOrCreatePool(
     schemaName: string,
   ): genericPool.Pool<SchemaConnection> {
-    // Använd befintlig pool om den finns
     if (this.connectionPools.has(schemaName)) {
       const pool = this.connectionPools.get(schemaName)!;
       this.poolLastUsedTime.set(schemaName, Date.now());
       return pool;
     }
 
-    // Skapa en ny pool om den inte finns
     this.logger.log(`Creating connection pool for schema: ${schemaName}`);
 
-    // Välj rätt EntityManager baserat på schemaName
     const baseEm = schemaName === 'public' ? this.publicEm : this.tenantEm;
 
-    // Factory för att skapa och förstöra kopplingar
     const factory: genericPool.Factory<SchemaConnection> = {
       create: async (): Promise<SchemaConnection> => {
         try {
-          // Skapa en ny fork av EntityManager med rätt schema
           const em = baseEm.fork({ schema: schemaName });
           const connection = em.getConnection();
 
-          // Sätt search path och testa anslutningen
           await connection.execute(`SET search_path TO "${schemaName}"`);
           await connection.execute('SELECT 1');
 
@@ -287,9 +260,6 @@ export class TenantConnectionManagerService
     return pool;
   }
 
-  /**
-   * Kör en callback-funktion i kontexten av ett specifikt schema
-   */
   async runInTenantContext<T>(
     schemaName: string,
     callback: (em: EntityManager) => Promise<T>,
@@ -298,7 +268,6 @@ export class TenantConnectionManagerService
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
-      // Logga bara vid första försöket eller om vi har återförsök
       if (attempt === 0) {
         this.logger.debug(`Running in tenant context: ${schemaName}`);
       } else {
@@ -307,27 +276,21 @@ export class TenantConnectionManagerService
         );
       }
 
-      // Hämta eller skapa pool
       const pool = this.getOrCreatePool(schemaName);
       let conn: SchemaConnection | undefined;
 
       try {
-        // Skaffa anslutning från pool
         conn = await pool.acquire();
 
-        // Kontrollera att anslutningen är giltig
         if (!conn) {
           throw new Error(
             `Failed to acquire valid connection for schema: ${schemaName}`,
           );
         }
 
-        // Uppdatera lastUsed
         conn.lastUsed = Date.now();
         this.poolLastUsedTime.set(schemaName, Date.now());
 
-        // Kör callback inom schemaContextStorage OCH RequestContext
-        // Detta gör schemaName tillgängligt via getSchemaName()
         return await schemaContextStorage.run(schemaName, async () => {
           return await RequestContext.create(conn!.em, () =>
             callback(conn!.em),
@@ -343,13 +306,11 @@ export class TenantConnectionManagerService
           { attempt: attempt + 1, maxAttempts: retries + 1 },
         );
 
-        // Återförsök om vi inte nått maxgränsen
         if (attempt < retries) {
-          const delay = Math.pow(2, attempt) * 100; // Exponentiell backoff
+          const delay = Math.pow(2, attempt) * 100;
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       } finally {
-        // Släpp anslutningen tillbaka till poolen
         if (conn && pool) {
           try {
             await pool.release(conn);
@@ -365,15 +326,11 @@ export class TenantConnectionManagerService
       }
     }
 
-    // Om vi kommer hit har alla återförsök misslyckats
     throw (
       lastError || new Error(`All retries failed for schema: ${schemaName}`)
     );
   }
 
-  /**
-   * Kör en query genom QueryRunner-interface
-   */
   async executeQuery<T>(
     schemaName: string,
     operation: (queryRunner: QueryRunner) => Promise<T>,

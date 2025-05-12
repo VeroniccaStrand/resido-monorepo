@@ -41,12 +41,10 @@ export class UserService {
         );
       }
 
-      // Validera lösenord
       if (!data.password || data.password.length < 8) {
         throw new ValidationException('Password must be at least 8 characters');
       }
 
-      // Skapa användardomänobjekt med factory
       const user = this.userFactory.createUser({
         email: data.email,
         firstName: data.firstName,
@@ -54,12 +52,10 @@ export class UserService {
         phone: data.phone,
       });
 
-      // Hasha lösenord
       const passwordHash = await this.passwordService.hashPassword(
         data.password,
       );
 
-      // Spara användare
       const createdUser = await this.userRepository.create(user, passwordHash);
 
       this.logger.log(`User created: ${createdUser.email}`);
@@ -144,7 +140,6 @@ export class UserService {
     newPassword: string,
   ): Promise<void> {
     try {
-      // Validera lösenord
       if (!newPassword || newPassword.length < 8) {
         throw new ValidationException(
           'New password must be at least 8 characters',
@@ -153,7 +148,6 @@ export class UserService {
 
       const user = await this.getUserById(id);
 
-      // Hämta nuvarande lösenordshash
       const currentHash = await this.userRepository.getPasswordHash(
         user.id as string,
       );
@@ -161,7 +155,6 @@ export class UserService {
         throw new ValidationException('User has no password set');
       }
 
-      // Validera nuvarande lösenord
       const isMatch = await this.passwordService.comparePasswords(
         currentPassword,
         currentHash,
@@ -171,7 +164,6 @@ export class UserService {
         throw new ValidationException('Current password is incorrect');
       }
 
-      // Hasha nytt lösenord och spara
       const newHash = await this.passwordService.hashPassword(newPassword);
       await this.userRepository.updatePasswordHash(user.id as string, newHash);
 

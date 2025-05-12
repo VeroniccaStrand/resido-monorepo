@@ -33,13 +33,11 @@ export class TenantRepository {
 
   async createSchema(schemaName: string, em?: EntityManager): Promise<void> {
     if (em) {
-      // Om EntityManager redan är tillgänglig (t.ex. från en transaktion)
       await em
         .getConnection()
         .execute(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
       this.logger.log(`Schema created: ${schemaName}`);
     } else {
-      // Annars använd en ny connection
       await this.tenantConnectionManager.runWithPublicSchema(async (em) => {
         await em
           .getConnection()

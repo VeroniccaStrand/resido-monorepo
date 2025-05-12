@@ -16,7 +16,6 @@ export class GrpcException extends RpcException {
   }
 }
 
-// Mappning av domänfel till gRPC-koder
 export function mapDomainToGrpcException(error: Error): GrpcException {
   let code = 'INTERNAL';
   let details: Record<string, any> = {};

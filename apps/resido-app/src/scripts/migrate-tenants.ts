@@ -15,7 +15,6 @@ import publicConfig from '../config/mikro-orm-public.config';
 import tenantConfig from '../config/mikro-orm-tenant.config';
 import { TenantEntity } from '../tenant/infrastructure/tenant.entity';
 
-// Definiera config typen för att undvika eslint-varningar
 interface MigrationConfig {
   path?: string;
   glob?: string;
@@ -32,7 +31,6 @@ interface TenantSchema {
   schema: string;
 }
 
-// Konfigurationsoptioner för migreringar
 export interface MigrationOptions {
   batchSize?: number;
   silent?: boolean;
@@ -40,7 +38,6 @@ export interface MigrationOptions {
   lockTimeoutSeconds?: number;
 }
 
-// Utökad interface för migreringsresultat
 export interface MigrationSummary {
   totalTenants: number;
   successful: number;
@@ -54,22 +51,16 @@ export interface MigrationSummary {
   }>;
 }
 
-// Resultat för individuell tenant-migrering
 interface TenantMigrationResult {
   appliedMigrations: string[];
   skippedMigrations: string[];
 }
 
-/**
- * Huvudfunktion för att migrera alla tenant-scheman
- * Integreras med applikationen genom att anropas i bootstrap
- */
 export async function migrateTenants(
   options: MigrationOptions = {},
 ): Promise<MigrationSummary> {
   const startTime = Date.now();
 
-  // Sätt standardvärden för options om de inte är definierade
   const {
     batchSize = 5,
     silent = false,
@@ -77,7 +68,6 @@ export async function migrateTenants(
     lockTimeoutSeconds = 300, // 5 minuter
   } = options;
 
-  // Skapa result-objekt
   const migrationSummary: MigrationSummary = {
     totalTenants: 0,
     successful: 0,
@@ -87,11 +77,10 @@ export async function migrateTenants(
     failedTenants: [],
   };
 
-  // Skapa configService först
   const configService = new ConfigService();
-  // Sedan skapa logger med configService som parameter
+
   const logger = new LoggerService(configService);
-  // Sätt kontext precis som i UserService
+
   logger.setContext('TenantMigrator');
 
   if (!silent) {
@@ -104,16 +93,13 @@ export async function migrateTenants(
   let lockAcquired = false;
 
   try {
-    // Anslut till publika schemat
     if (!silent) {
       logger.log('Initializing public ORM connection...');
     }
     ormPub = await MikroORM.init(publicConfig);
 
-    // forka en kontext-specifik EntityManager för att undvika ValidationError
     const emPub = ormPub.em.fork();
 
-    // Implementera låsmekanism för att förhindra parallella körningar
     try {
       const connection = emPub.getConnection();
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -134,7 +120,6 @@ export async function migrateTenants(
         logger.log('Successfully acquired migration lock');
       }
     } catch (error) {
-      // Om felet inte redan är ett domän-exception, paketera det
       if (!isDomainException(error)) {
         const errorInfo = getErrorInfo(error);
         throw new DatabaseAccessException(
@@ -145,7 +130,6 @@ export async function migrateTenants(
       throw error;
     }
 
-    // ===== här ändras hämtningen av scheman till att använda TenantEntity =====
     if (!silent) {
       logger.log('Fetching tenant list from public.tenants table...');
     }
@@ -167,7 +151,6 @@ export async function migrateTenants(
       });
     }
 
-    // Stäng publika ORM-anslutningen innan tenant-processeringen
     await ormPub.close(true);
     ormPub = undefined;
 
@@ -178,9 +161,7 @@ export async function migrateTenants(
       migrationSummary.totalDuration = Date.now() - startTime;
       return migrationSummary;
     }
-    // ===========================================================================
 
-    // Batchvis migrering
     if (!silent) {
       logger.log(`Processing tenant schemas in batches of ${batchSize}`);
     }
@@ -208,7 +189,6 @@ export async function migrateTenants(
         }),
       );
 
-      // Procesera resultaten
       results.forEach((result, idx) => {
         const tenant = batch[idx];
 
@@ -260,7 +240,6 @@ export async function migrateTenants(
       });
     }
 
-    // Uppdatera total körningstid
     migrationSummary.totalDuration = Date.now() - startTime;
 
     if (!silent) {
@@ -276,7 +255,6 @@ export async function migrateTenants(
       );
     }
 
-    // Logga alltid fel även i silent-läge
     if (migrationSummary.failed > 0) {
       logger.warn(
         `${migrationSummary.failed} tenant migrations failed`,
@@ -289,7 +267,6 @@ export async function migrateTenants(
   } catch (error) {
     const errorInfo = getErrorInfo(error);
 
-    // Logga alltid fel, även i tyst läge
     logger.error('Fatal error during migration process:', errorInfo.stack, {
       error: errorInfo.message,
       name: errorInfo.name,
@@ -298,7 +275,6 @@ export async function migrateTenants(
 
     throw error;
   } finally {
-    // Frigör låset om det förvärvades
     if (lockAcquired && ormPub) {
       try {
         const connection = ormPub.em.getConnection();
@@ -315,7 +291,6 @@ export async function migrateTenants(
       }
     }
 
-    // Stäng ORM-anslutningen om den fortfarande är öppen
     if (ormPub) {
       try {
         await ormPub.close(true);
@@ -327,16 +302,12 @@ export async function migrateTenants(
   }
 }
 
-/**
- * Migrerar ett specifikt tenant-schema
- */
 async function migrateTenantSchema(
   tenant: TenantSchema,
   baseConfig: OrmConfig,
   configService: ConfigService,
   silent = false,
 ): Promise<TenantMigrationResult> {
-  // Skapa en ny logger-instans för varje tenant, precis som i UserService
   const logger = new LoggerService(configService);
   logger.setContext(`Tenant(${tenant.id})`);
 
@@ -349,7 +320,6 @@ async function migrateTenantSchema(
   let orm: MikroORM | undefined;
 
   try {
-    // Initialisera tenant-specifik ORM
     orm = await MikroORM.init({
       ...baseConfig,
       schema,
@@ -366,7 +336,6 @@ async function migrateTenantSchema(
     });
 
     try {
-      // Skapa migrations-tabellen om den inte existerar
       const connection = orm.em.getConnection();
       try {
         await connection.execute(`
@@ -394,7 +363,6 @@ async function migrateTenantSchema(
         );
       }
 
-      // Kör migreringar
       const migrator = orm.getMigrator();
       const executed = await migrator.getExecutedMigrations();
 
@@ -415,7 +383,6 @@ async function migrateTenantSchema(
         });
       }
 
-      // Om det finns väntande migreringar, kör dem
       if (pending.length) {
         const result = await migrator.up();
 
@@ -444,7 +411,6 @@ async function migrateTenantSchema(
         };
       }
     } finally {
-      // Stäng alltid orm-anslutningen
       if (orm) {
         await orm.close(true);
       }
@@ -459,19 +425,14 @@ async function migrateTenantSchema(
       errorDetails: errorInfo.details,
     });
 
-    // Kasta vidare felet för att hanteras av Promise.allSettled
     if (isDomainException(error)) {
       throw error;
     }
 
-    // Annars kasta en custom MigrationException
     throw new MigrationException(errorInfo.message, tenant.id, schema);
   }
 }
 
-/**
- * Hjälpfunktion för att formatera tid i ms till läsbar format
- */
 function formatDuration(ms: number): string {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -484,13 +445,9 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
-/**
- * Bootstrap-skript för direktkörning
- */
 if (require.main === module) {
   console.log('Starting direct tenant migrations...');
 
-  // Läs miljövariabler för konfiguration
   const batchSize = process.env.MIGRATION_BATCH_SIZE
     ? parseInt(process.env.MIGRATION_BATCH_SIZE, 10)
     : 5;

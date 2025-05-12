@@ -16,7 +16,6 @@ export class TenantMapper {
     dto.createdAt = grpcResponse.createdAt;
     dto.updatedAt = grpcResponse.updatedAt;
 
-    // Include activation token if it exists
     if (grpcResponse.activationToken) {
       dto.activationToken = grpcResponse.activationToken;
     }

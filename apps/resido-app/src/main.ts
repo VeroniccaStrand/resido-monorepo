@@ -8,22 +8,19 @@ import { LoggerService } from '@app/shared';
 import { migrateTenants } from './scripts/migrate-tenants';
 
 async function bootstrap(): Promise<void> {
-  // Skapa en tillfällig ConfigService för loggern eftersom LoggerService kräver den
   const tempConfigService = new ConfigService();
   const bootstrapLogger = new LoggerService(tempConfigService);
   bootstrapLogger.setContext('Bootstrap');
 
-  // Läs bekräftelse på om vi ska köra migrationerna
   const shouldRunMigrations = process.env.RUN_MIGRATIONS === 'true';
 
   if (shouldRunMigrations) {
-    // Läs in migrations-variablerna från env
     const batchSize = parseInt(process.env.MIGRATION_BATCH_SIZE || '5', 10);
     const lockTimeoutSeconds = parseInt(
       process.env.MIGRATION_LOCK_TIMEOUT || '300',
       10,
     );
-    // MIGRATION_VERBOSE = 'true' betyder att vi vill ha full loggning => silent = false
+
     const silent = process.env.MIGRATION_VERBOSE === 'true' ? false : true;
     const specificTenantId = process.env.MIGRATION_TENANT_ID || undefined;
 

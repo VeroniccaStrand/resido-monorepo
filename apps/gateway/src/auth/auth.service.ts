@@ -1,4 +1,3 @@
-// apps/gateway/src/auth/auth.service.ts
 import { LoggerService } from '@app/shared';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -6,7 +5,6 @@ import { ClientGrpc } from '@nestjs/microservices';
 import { Observable, firstValueFrom } from 'rxjs';
 import { LoginDto } from './dto/login.dto';
 
-// Definiera interfaces för typesäkerhet
 interface UserResponse {
   id: string;
   email: string;
@@ -54,7 +52,6 @@ export class AuthService {
     try {
       this.logger.log(`Login attempt for user: ${loginDto.email}`);
 
-      // Steg 1: Verifiera användaruppgifter mot user service (public schema)
       const user = await firstValueFrom(
         this.userService.verifyCredentials({
           email: loginDto.email,
@@ -68,7 +65,6 @@ export class AuthService {
 
       this.logger.log(`User ${loginDto.email} authenticated successfully`);
 
-      // Steg 2: Hämta schemanamn för denna användare från user-tenant-mapper
       const schemaResponse = await firstValueFrom(
         this.userTenantMapperService.getSchemaByEmail({
           email: loginDto.email,
@@ -80,19 +76,17 @@ export class AuthService {
         `Retrieved schema name for ${loginDto.email}: ${schemaName}`,
       );
 
-      // Steg 3: Skapa JWT med användarinformation OCH schemanamn
       const payload = {
         sub: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        schemaName: schemaName, // VIKTIGT: Inkludera schemanamn i token
+        schemaName: schemaName,
       };
 
       const token = this.jwtService.sign(payload);
       this.logger.log(`Generated JWT token for user ${loginDto.email}`);
 
-      // Skicka tillbaka token och användarinfo till klienten
       return {
         access_token: token,
         user: {

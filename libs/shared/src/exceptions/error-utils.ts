@@ -1,4 +1,3 @@
-// libs/shared/src/utils/error-utils.ts
 import {
   DomainException,
   ValidationException,
@@ -20,10 +19,8 @@ export function getErrorInfo(error: unknown): ErrorInfo {
       name: error.name,
     };
 
-    // Extrahera ytterligare information om det finns
     if (error instanceof ValidationException && error.errors) {
       info.details = { errors: error.errors };
-      // Alternativt, om du behöver komma åt properties som inte är definierade i Error:
     } else if (typeof error === 'object' && error !== null) {
       const potentialErrorsContainer = error as {
         errors?: Record<string, string[]>;
@@ -41,7 +38,6 @@ export function getErrorInfo(error: unknown): ErrorInfo {
   };
 }
 
-// Type guards för error-typer
 export function isDomainException(error: unknown): error is DomainException {
   return error instanceof DomainException;
 }

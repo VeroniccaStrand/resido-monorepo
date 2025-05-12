@@ -23,7 +23,7 @@ async function bootstrap(): Promise<void> {
       .setTitle('Resido API Gateway')
       .setDescription('API-dokumentation för Resido-plattformen')
       .setVersion('1.0')
-      .addBearerAuth() // Lägger till auth-stöd i Swagger UI
+      .addBearerAuth()
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

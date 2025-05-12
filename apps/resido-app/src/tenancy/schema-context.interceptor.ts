@@ -41,31 +41,25 @@ export class SchemaContextInterceptor implements NestInterceptor {
   ): Promise<Observable<unknown>> {
     const controllerName = ctx.getClass().name;
     const handlerName = ctx.getHandler().name;
-    const requestId = this.generateRequestId();
 
-    // Kontrollera att vi har en gRPC-kontext
     if (ctx.getType() !== 'rpc') {
       throw new Error('This interceptor only supports gRPC contexts');
     }
 
     this.logger.debug('Processing gRPC request', {
-      requestId,
       controller: controllerName,
       method: handlerName,
     });
 
-    // Kontrollera om endpointen är markerad som public med dekorator
     const isPublic = this.reflector.getAllAndOverride<boolean>(PUBLIC_KEY, [
       ctx.getHandler(),
       ctx.getClass(),
     ]);
 
-    // Hantera publika endpoints med default schema
     if (isPublic) {
       this.logger.debug(
         'Endpoint is public (@Public decorator), using default schema',
         {
-          requestId,
           controller: controllerName,
           method: handlerName,
           schema: this.DEFAULT_SCHEMA,
@@ -79,31 +73,26 @@ export class SchemaContextInterceptor implements NestInterceptor {
       );
     }
 
-    // Hämta schemaName från gRPC metadata
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const rpcContext = ctx.switchToRpc().getContext();
     const schemaName = this.extractSchemaFromMetadata(
       rpcContext as Record<string, unknown>,
-      requestId,
     );
 
     if (!schemaName) {
       const errorMsg = 'Missing schema-name in gRPC metadata';
-      this.logger.warn(errorMsg, LogPriority.P1, { requestId });
+      this.logger.warn(errorMsg, LogPriority.P1);
       throw new BadRequestException(errorMsg);
     }
 
-    // Validera schemanamnet
-    this.validateSchemaName(schemaName, requestId);
+    this.validateSchemaName(schemaName);
 
     this.logger.debug('Using schema for gRPC request', {
-      requestId,
       schemaName,
       controller: controllerName,
       method: handlerName,
     });
 
-    // Kör request i rätt schema-kontext
     return await this.tenantConnectionManager.runInTenantContext(
       schemaName,
       // eslint-disable-next-line @typescript-eslint/require-await
@@ -113,12 +102,10 @@ export class SchemaContextInterceptor implements NestInterceptor {
 
   private extractSchemaFromMetadata(
     rpcContext: Record<string, unknown>,
-    requestId: string,
   ): string | null {
     try {
       const metadata = rpcContext as GrpcMetadata;
 
-      // Logga rpcContext försiktigt för att undvika stringify-problem
       try {
         this.logger.debug(
           `RPC CONTEXT keys: ${Object.keys(rpcContext).join(', ')}`,
@@ -127,11 +114,10 @@ export class SchemaContextInterceptor implements NestInterceptor {
         this.logger.warn(`Could not stringify rpcContext keys: ${String(err)}`);
       }
 
+      //!! Debuggar namn - ta bort.
       if (metadata && typeof metadata.get === 'function') {
-        // Försök med olika namnkonventioner
         let schemaValue: string | string[] | undefined;
 
-        // Testa olika namnkonventioner
         schemaValue = metadata.get('schema-name');
         if (schemaValue) {
           if (Array.isArray(schemaValue) && schemaValue.length > 0) {
@@ -142,7 +128,6 @@ export class SchemaContextInterceptor implements NestInterceptor {
           }
         }
 
-        // Testa camelCase
         schemaValue = metadata.get('schemaName');
         if (schemaValue) {
           if (Array.isArray(schemaValue) && schemaValue.length > 0) {
@@ -153,7 +138,6 @@ export class SchemaContextInterceptor implements NestInterceptor {
           }
         }
 
-        // Testa snake_case
         schemaValue = metadata.get('schema_name');
         if (schemaValue) {
           if (Array.isArray(schemaValue) && schemaValue.length > 0) {
@@ -164,11 +148,8 @@ export class SchemaContextInterceptor implements NestInterceptor {
           }
         }
 
-        // Mer detaljerad loggning för att förstå vad som finns i metadata
         if (this.configService.get<string>('NODE_ENV') !== 'production') {
-          // Logga alla tester
           const testResults = {
-            requestId,
             'schema-name': metadata.get('schema-name') ? 'exists' : 'null',
             schemaName: metadata.get('schemaName') ? 'exists' : 'null',
             schema_name: metadata.get('schema_name') ? 'exists' : 'null',
@@ -180,7 +161,6 @@ export class SchemaContextInterceptor implements NestInterceptor {
           );
 
           this.logger.debug('gRPC metadata received', {
-            requestId,
             hasSchemaName: false,
             availableKeys: Object.keys(metadata).join(', '),
           });
@@ -189,13 +169,9 @@ export class SchemaContextInterceptor implements NestInterceptor {
         this.logger.warn(
           'Invalid or unsupported gRPC metadata format',
           LogPriority.P1,
-          {
-            requestId,
-          },
         );
       }
 
-      // Slutligen, försök hitta schema direkt i rpcContext
       if (typeof rpcContext.schemaName === 'string' && rpcContext.schemaName) {
         return rpcContext.schemaName;
       }
@@ -207,10 +183,8 @@ export class SchemaContextInterceptor implements NestInterceptor {
         return rpcContext['schema-name'];
       }
 
-      // Om inget hittades
       return null;
     } catch (debugError) {
-      // Hantera eventuella fel vid extrahering
       const errorId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const errorMessage =
         debugError instanceof Error ? debugError.message : String(debugError);
@@ -221,7 +195,6 @@ export class SchemaContextInterceptor implements NestInterceptor {
         'Error extracting schema from gRPC metadata',
         errorStack,
         {
-          requestId,
           errorId,
           errorMessage,
         },
@@ -230,12 +203,10 @@ export class SchemaContextInterceptor implements NestInterceptor {
     }
   }
 
-  private validateSchemaName(schemaName: string, requestId: string): void {
-    // 1. Kontrollera längd och format med regex
+  private validateSchemaName(schemaName: string): void {
     if (!this.SCHEMA_NAME_REGEX.test(schemaName)) {
       const errorId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       this.logger.warn('Invalid schema name format', LogPriority.P0, {
-        requestId,
         errorId,
         schemaName,
       });
@@ -244,13 +215,11 @@ export class SchemaContextInterceptor implements NestInterceptor {
       );
     }
 
-    // 2. Kontrollera förbjudna prefix
     if (
       this.FORBIDDEN_PREFIXES.some((prefix) => schemaName.startsWith(prefix))
     ) {
       const errorId = `err_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       this.logger.warn('Forbidden schema prefix detected', LogPriority.P0, {
-        requestId,
         errorId,
         schemaName,
       });

@@ -60,7 +60,6 @@ export class Tenant {
     this._updatedAt = new Date();
   }
 
-  // Domänmetoder
   activate(): void {
     this._isActive = true;
     this._updatedAt = new Date();
@@ -81,7 +80,6 @@ export class Tenant {
     this._updatedAt = new Date();
   }
 
-  // Getters
   get id(): string | undefined {
     return this._id;
   }

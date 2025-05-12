@@ -36,7 +36,6 @@ export class TokenGuard implements CanActivate {
         throw new UnauthorizedException('Invalid or expired token');
       }
 
-      // Store schema and user info in request for later use
       request.schemaName = validation.schemaName;
 
       if ('userId' in validation) {

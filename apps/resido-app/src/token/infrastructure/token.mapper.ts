@@ -11,7 +11,7 @@ export class TokenMapper {
       type: entity.type,
       expiresAt: entity.expiresAt,
       isUsed: entity.isUsed,
-      metadata: entity.metadata as TokenMetadata, // Cast to TokenMetadata
+      metadata: entity.metadata as TokenMetadata,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     });

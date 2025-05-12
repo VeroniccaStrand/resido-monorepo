@@ -25,9 +25,7 @@ export class SchemaMetadataInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest<RequestWithUser>();
 
-    // Injecta schemanamn i request för användning i gRPC client
     if (req.user && req.user.schemaName) {
-      // Spara på request för användning i gRPC clients
       req.schemaName = req.user.schemaName;
       this.logger.log(`Injected schema name in request: ${req.schemaName}`);
     } else {

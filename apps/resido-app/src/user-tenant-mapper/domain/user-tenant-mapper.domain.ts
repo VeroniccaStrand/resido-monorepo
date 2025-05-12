@@ -1,4 +1,3 @@
-// src/user-tenant-mapper/domain/user-tenant-mapper.domain.ts
 export class UserTenantMapper {
   private _id?: number;
   private _email: string;
@@ -36,7 +35,6 @@ export class UserTenantMapper {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  // Getters
   get id(): number | undefined {
     return this._id;
   }

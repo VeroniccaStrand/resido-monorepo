@@ -1,4 +1,3 @@
-// apps/resido-app/src/resido-app.module.ts
 import { Module } from '@nestjs/common';
 import { ResidoAppController } from './resido-app.controller';
 import { ResidoAppService } from './resido-app.service';

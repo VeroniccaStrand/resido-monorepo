@@ -63,7 +63,6 @@ export class UserController {
     );
 
     try {
-      // Detta är korrekt - skickar createUserDto (utan schemaName) och schemaName separat
       const grpcResponse = await this.userService.createUser(
         createUserDto,
         schemaName,
