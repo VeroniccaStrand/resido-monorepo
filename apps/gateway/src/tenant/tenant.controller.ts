@@ -22,7 +22,9 @@ import { TenantResponseDto } from './dto/tenant-response.dto';
 import { TenantsResponseDto } from './dto/tenants-response.dto';
 import { UpdateContactInfoDto } from './dto/update-tenant.dto';
 import { TenantMapper } from './mapper/tenant.mapper';
+import { Public } from '../common/public.decorator';
 
+@Public()
 @ApiTags('tenants')
 @Controller('tenants')
 export class TenantController {

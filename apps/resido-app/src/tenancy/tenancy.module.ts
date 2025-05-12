@@ -1,23 +1,19 @@
-import { Global, Module } from '@nestjs/common';
-
-import { LoggerModule } from '@app/shared';
+// src/tenancy/tenancy.module.ts
+import { Module, Global } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { SchemaConnectionService } from './schema-connection.service';
-import { SchemaInterceptor } from './schema.interceptor';
-import { SchemaContextService } from './schema-context.service';
+
+import { SchemaContextInterceptor } from './schema-context.interceptor';
+import { TenantConnectionManagerService } from './tenant-connection-manager.service';
 
 @Global()
 @Module({
-  imports: [LoggerModule],
-  controllers: [],
   providers: [
-    SchemaContextService,
-    SchemaConnectionService,
+    TenantConnectionManagerService,
     {
       provide: APP_INTERCEPTOR,
-      useClass: SchemaInterceptor,
+      useClass: SchemaContextInterceptor,
     },
   ],
-  exports: [SchemaContextService, SchemaConnectionService],
+  exports: [TenantConnectionManagerService],
 })
 export class TenancyModule {}

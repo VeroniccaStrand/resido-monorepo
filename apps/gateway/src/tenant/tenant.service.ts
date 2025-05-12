@@ -1,6 +1,7 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Scope } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom, Observable } from 'rxjs';
+import { REQUEST } from '@nestjs/core';
 import {
   LoggerService,
   getErrorInfo,
@@ -18,6 +19,7 @@ import {
   TokenResponse,
 } from '@app/shared/proto-gen/resido';
 import { TokenService } from '../token/token.service';
+import { GrpcClientFactory } from '../common/grpc-client.factory';
 
 interface TenantServiceClient {
   createTenant(data: CreateTenantRequest): Observable<TenantResponse>;
@@ -26,35 +28,56 @@ interface TenantServiceClient {
   activateTenant(data: TenantIdRequest): Observable<TenantResponse>;
   deactivateTenant(data: TenantIdRequest): Observable<TenantResponse>;
   updateContactInfo(data: UpdateContactInfoRequest): Observable<TenantResponse>;
+
+  [methodName: string]: (...args: any[]) => Observable<any>;
 }
 
-@Injectable()
+interface RequestWithSchema extends Request {
+  schemaName?: string;
+}
+
+@Injectable({ scope: Scope.REQUEST })
 export class TenantService implements OnModuleInit {
   private tenantService: TenantServiceClient;
 
   constructor(
     private readonly logger: LoggerService,
     private readonly tokenService: TokenService,
+    private readonly grpcClientFactory: GrpcClientFactory,
     @Inject('TENANT_SERVICE') private client: ClientGrpc,
+    @Inject(REQUEST) private readonly request: RequestWithSchema,
   ) {
     this.logger.setContext('TenantService');
   }
 
   onModuleInit() {
-    this.tenantService =
-      this.client.getService<TenantServiceClient>('TenantService');
+    // Använd GrpcClientFactory för att få en proxy med schema metadata
+    this.tenantService = this.grpcClientFactory.create<TenantServiceClient>(
+      this.client,
+      'TenantService',
+      this.request,
+    );
     this.logger.log('TenantService gRPC client initialized');
   }
 
+  // createTenant är public så vi behöver explicit sätta 'public' schema
   async createTenant(data: CreateTenantRequest): Promise<TenantResponse> {
     this.logger.debug(
       `Sending createTenant gRPC request: ${JSON.stringify(data)}`,
     );
 
     try {
-      // Create the tenant
+      // Create the tenant - create en temporär klient med 'public' schema
+      const publicRequest = { ...this.request, schemaName: 'public' };
+      const publicTenantService =
+        this.grpcClientFactory.create<TenantServiceClient>(
+          this.client,
+          'TenantService',
+          publicRequest,
+        );
+
       const tenantResponse = await firstValueFrom<TenantResponse>(
-        this.tenantService.createTenant(data),
+        publicTenantService.createTenant(data),
       );
 
       // Now create a token for user creation with the tenant's schema
@@ -73,17 +96,11 @@ export class TenantService implements OnModuleInit {
             `Created activation token for tenant ${tenantResponse.id}`,
           );
         } catch (tokenError: unknown) {
-          if (tokenError instanceof Error) {
-            const errorInfo = getErrorInfo(tokenError);
-            this.logger.error(
-              `Failed to create activation token: ${errorInfo.message}`,
-              errorInfo.stack,
-            );
-          } else {
-            this.logger.error(
-              'Failed to create activation token: Unknown error type',
-            );
-          }
+          const errorInfo = getErrorInfo(tokenError);
+          this.logger.error(
+            `Failed to create activation token: ${errorInfo.message}`,
+            errorInfo.stack,
+          );
         }
       }
 
@@ -103,6 +120,8 @@ export class TenantService implements OnModuleInit {
     }
   }
 
+  // Resterande metoder använder tenantService med request-objektets schemaName
+  // Inga ändringar behövs i dessa metoder - GrpcClientFactory hanterar schemaName automatiskt
   async getTenantById(data: GetTenantByIdRequest): Promise<TenantResponse> {
     this.logger.debug(`Sending getTenantById gRPC request for ID: ${data.id}`);
 

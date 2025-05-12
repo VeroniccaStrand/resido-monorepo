@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 @Injectable()
 export class SchemaHashService {
   private readonly ENCRYPTION_KEY =
-    process.env.SCHEMA_ENCRYPTION_KEY || 'a-32-character-key-for-aes-256-cbc!';
+    process.env.SCHEMA_ENCRYPTION_KEY || 'zHp2E8mNxB7qLcKjT5sRvY3wF9gA4dV6';
   private readonly IV_LENGTH = 16;
 
   cryptSchemaName(schemaName: string): string {

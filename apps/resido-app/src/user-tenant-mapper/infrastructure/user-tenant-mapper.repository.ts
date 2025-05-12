@@ -1,17 +1,15 @@
 // src/user-tenant-mapper/infrastructure/user-tenant-mapper.repository.ts
 import { Injectable } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
-import { InjectEntityManager } from '@mikro-orm/nestjs';
+import { LoggerService } from '@app/shared';
+import { TenantConnectionManagerService } from '../../tenancy/tenant-connection-manager.service';
 import { UserTenantMapper } from '../domain/user-tenant-mapper.domain';
 import { UserTenantMapperEntity } from './user-tenant-mapper.entity';
 import { UserTenantMapperMapper } from './user-tenant-mapper.mapper';
-import { LoggerService } from '@app/shared';
 
 @Injectable()
 export class UserTenantMapperRepository {
   constructor(
-    @InjectEntityManager('public')
-    private readonly em: EntityManager,
+    private readonly tenantConnectionManager: TenantConnectionManagerService,
     private readonly mapper: UserTenantMapperMapper,
     private readonly logger: LoggerService,
   ) {
@@ -19,37 +17,47 @@ export class UserTenantMapperRepository {
   }
 
   async create(mapper: UserTenantMapper): Promise<UserTenantMapper> {
-    const entity = this.mapper.toNewEntity(mapper);
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
+      const entity = this.mapper.toNewEntity(mapper);
 
-    this.em.persist(entity);
-    await this.em.flush();
+      em.persist(entity);
+      await em.flush();
 
-    return this.mapper.toDomain(entity);
+      return this.mapper.toDomain(entity);
+    });
   }
 
   async findByEmail(email: string): Promise<UserTenantMapper | null> {
-    const entity = await this.em.findOne(UserTenantMapperEntity, { email });
-    if (!entity) {
-      return null;
-    }
-    return this.mapper.toDomain(entity);
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
+      const entity = await em.findOne(UserTenantMapperEntity, { email });
+      if (!entity) {
+        return null;
+      }
+      return this.mapper.toDomain(entity);
+    });
   }
 
   async save(mapper: UserTenantMapper): Promise<UserTenantMapper> {
-    if (!mapper.id) {
-      return this.create(mapper);
-    }
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
+      if (!mapper.id) {
+        // Vi kan återanvända create-metoden men behöver använda EntityManager från denna kontext
+        const entity = this.mapper.toNewEntity(mapper);
+        em.persist(entity);
+        await em.flush();
+        return this.mapper.toDomain(entity);
+      }
 
-    const entity = await this.em.findOne(UserTenantMapperEntity, {
-      id: mapper.id,
+      const entity = await em.findOne(UserTenantMapperEntity, {
+        id: mapper.id,
+      });
+      if (!entity) {
+        throw new Error(`UserTenantMapper with id ${mapper.id} not found`);
+      }
+
+      this.mapper.updateEntity(entity, mapper);
+      await em.flush();
+
+      return this.mapper.toDomain(entity);
     });
-    if (!entity) {
-      throw new Error(`UserTenantMapper with id ${mapper.id} not found`);
-    }
-
-    this.mapper.updateEntity(entity, mapper);
-    await this.em.flush();
-
-    return this.mapper.toDomain(entity);
   }
 }

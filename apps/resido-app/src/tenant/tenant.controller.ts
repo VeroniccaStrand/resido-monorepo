@@ -13,7 +13,8 @@ import {
 import { TenantService } from './services/tenant.service';
 import { TenantMapper } from './infrastructure/tenant.mapper';
 import { UsePublicSchema } from '../tenancy/public-schema.decorator';
-
+import { Public } from 'apps/resido-app/decorators/public.decorator';
+@Public()
 @Controller()
 export class TenantController {
   constructor(

@@ -1,4 +1,5 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Scope } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 import { ClientGrpc } from '@nestjs/microservices';
 import { firstValueFrom, Observable } from 'rxjs';
 import {
@@ -16,55 +17,71 @@ import {
   UserResponse,
   Empty,
 } from '@app/shared/proto-gen/resido';
-import { Metadata } from '@grpc/grpc-js';
+import { GrpcClientFactory } from '../common/grpc-client.factory';
+import { CreateUserDto } from './dto/create-user.dto';
 
 interface UserServiceClient {
-  createUser(
-    data: CreateUserRequest,
-    metadata?: Record<string, any>,
-  ): Observable<UserResponse>;
+  createUser(data: CreateUserRequest): Observable<UserResponse>;
   getUserById(data: UserIdRequest): Observable<UserResponse>;
   updateUserInfo(data: UpdateUserInfoRequest): Observable<UserResponse>;
   changePassword(data: ChangePasswordRequest): Observable<Empty>;
   activateUser(data: UserIdRequest): Observable<UserResponse>;
   deactivateUser(data: UserIdRequest): Observable<UserResponse>;
   recordUserLogin(data: UserIdRequest): Observable<UserResponse>;
+
+  [methodName: string]: (...args: any[]) => Observable<any>;
 }
 
-@Injectable()
+interface RequestWithSchema extends Request {
+  schemaName?: string;
+}
+
+@Injectable({ scope: Scope.REQUEST })
 export class UserService implements OnModuleInit {
   private userService: UserServiceClient;
 
   constructor(
     private readonly logger: LoggerService,
+    private readonly grpcClientFactory: GrpcClientFactory,
     @Inject('USER_SERVICE') private client: ClientGrpc,
+    @Inject(REQUEST) private readonly request: RequestWithSchema,
   ) {
     this.logger.setContext('UserService');
   }
 
   onModuleInit() {
-    this.userService = this.client.getService<UserServiceClient>('UserService');
+    this.userService = this.grpcClientFactory.create<UserServiceClient>(
+      this.client,
+      'UserService',
+      this.request,
+    );
     this.logger.log('UserService gRPC client initialized');
   }
 
   async createUser(
-    data: CreateUserRequest,
+    data: CreateUserDto,
     schemaName: string,
   ): Promise<UserResponse> {
     this.logger.debug(
       `Sending createUser gRPC request for ${data.email} in schema ${schemaName}`,
     );
+    const createUserRequest: CreateUserRequest = {
+      ...data,
+      schemaName,
+    };
 
-    const metadata = new Metadata();
-    metadata.add('schema-name', schemaName);
+    const customRequest = { ...this.request, schemaName };
 
-    this.logger.debug(
-      `Sending createUser gRPC request with metadata: schema-name=${schemaName}`,
+    // Skapa en temporär client med rätt schema
+    const tempUserService = this.grpcClientFactory.create<UserServiceClient>(
+      this.client,
+      'UserService',
+      customRequest,
     );
 
     try {
       const response = await firstValueFrom(
-        this.userService.createUser(data, metadata),
+        tempUserService.createUser(createUserRequest),
       );
       this.logger.debug(
         `Received createUser gRPC response for ${response.email}`,
@@ -82,6 +99,8 @@ export class UserService implements OnModuleInit {
     }
   }
 
+  // För alla andra metoder använder vi den vanliga this.userService som
+  // automatiskt får schemaName från request-objektet via GrpcClientFactory
   async getUserById(data: UserIdRequest): Promise<UserResponse> {
     this.logger.debug(`Sending getUserById gRPC request for ID: ${data.id}`);
 
@@ -90,6 +109,7 @@ export class UserService implements OnModuleInit {
       this.logger.debug(`Received getUserById gRPC response`);
       return response;
     } catch (error: unknown) {
+      // Resten är oförändrat...
       const errorInfo = getErrorInfo(error);
       this.logger.error(
         `gRPC getUserById error: ${errorInfo.message}`,

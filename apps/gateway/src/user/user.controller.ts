@@ -25,6 +25,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { UserMapper } from './mapper/user.mapper';
 import { TokenGuard } from '../token/token.guard';
 import { Request } from 'express';
+import { Public } from '../common/public.decorator';
 @ApiTags('users')
 @Controller('users')
 export class UserController {
@@ -37,6 +38,7 @@ export class UserController {
   }
 
   @Post()
+  @Public()
   @UseGuards(TokenGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)

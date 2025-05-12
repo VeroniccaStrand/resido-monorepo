@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { UserMapper } from './mapper/user.mapper';
 import { TokenModule } from '../token/token.module';
+import { GrpcClientFactory } from '../common/grpc-client.factory';
 
 @Module({
   imports: [
@@ -27,6 +28,6 @@ import { TokenModule } from '../token/token.module';
     ]),
   ],
   controllers: [UserController],
-  providers: [UserService, UserMapper],
+  providers: [UserService, UserMapper, GrpcClientFactory],
 })
 export class UserModule {}

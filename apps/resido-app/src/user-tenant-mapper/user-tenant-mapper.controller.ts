@@ -6,7 +6,8 @@ import {
   GetSchemaByEmailRequest,
   UserTenantMapperResponse,
 } from '@app/shared/proto-gen/resido';
-
+import { Public } from 'apps/resido-app/decorators/public.decorator';
+@Public()
 @Controller()
 export class UserTenantMapperController {
   constructor(

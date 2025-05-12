@@ -3,12 +3,12 @@ import { Token } from '../domain/token.domain';
 import { TokenEntity } from './token.entity';
 import { TokenMapper } from './token.mapper';
 import { LoggerService } from '@app/shared';
-import { SchemaConnectionService } from '../../tenancy/schema-connection.service';
+import { TenantConnectionManagerService } from '../../tenancy/tenant-connection-manager.service';
 
 @Injectable()
 export class TokenRepository {
   constructor(
-    private readonly schemaConnectionService: SchemaConnectionService,
+    private readonly tenantConnectionManager: TenantConnectionManagerService,
     private readonly tokenMapper: TokenMapper,
     private readonly logger: LoggerService,
   ) {
@@ -16,7 +16,7 @@ export class TokenRepository {
   }
 
   async createToken(token: Token): Promise<Token> {
-    return this.schemaConnectionService.runWithPublicSchema(async (em) => {
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
       const entity = this.tokenMapper.toEntity(token);
       await em.persistAndFlush(entity);
       this.logger.log(`Token created: ${entity.id} (${entity.type})`);
@@ -25,7 +25,7 @@ export class TokenRepository {
   }
 
   async findByTokenValue(tokenValue: string): Promise<Token | null> {
-    return this.schemaConnectionService.runWithPublicSchema(async (em) => {
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
       const entity = await em.findOne(TokenEntity, { token: tokenValue });
       if (!entity) return null;
       return this.tokenMapper.toDomain(entity);
@@ -33,7 +33,7 @@ export class TokenRepository {
   }
 
   async save(token: Token): Promise<Token> {
-    return this.schemaConnectionService.runWithPublicSchema(async (em) => {
+    return this.tenantConnectionManager.runWithPublicSchema(async (em) => {
       const entity = await em.findOne(TokenEntity, { id: token.id });
       if (!entity) {
         throw new Error(

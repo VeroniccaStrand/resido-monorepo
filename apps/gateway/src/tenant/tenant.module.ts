@@ -7,6 +7,7 @@ import { SharedModule } from '@app/shared';
 import { TenantMapper } from './mapper/tenant.mapper';
 import { ConfigService } from '@nestjs/config';
 import { TokenModule } from '../token/token.module';
+import { GrpcClientFactory } from '../common/grpc-client.factory';
 
 @Module({
   imports: [
@@ -28,6 +29,6 @@ import { TokenModule } from '../token/token.module';
     ]),
   ],
   controllers: [TenantController],
-  providers: [TenantService, TenantMapper],
+  providers: [TenantService, TenantMapper, GrpcClientFactory],
 })
 export class TenantModule {}
