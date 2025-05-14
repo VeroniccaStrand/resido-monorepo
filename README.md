@@ -1,98 +1,156 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Gateway-Based Multi-Tenant SaaS Backend with Schema Isolation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This repository contains a modular NestJS-based architecture for a multi-tenant SaaS platform. Each customer (tenant) is isolated in its own PostgreSQL schema, with dynamic schema creation and migrations handled by MikroORM and runtime routing through a central API gateway. 
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+* [Features](#features)
+* [Architecture](#architecture)
+* [Technology Stack](#technology-stack)
+* [Getting Started](#getting-started)
 
-## Project setup
+  * [Prerequisites](#prerequisites)
+  * [Installation](#installation)
+  * [Configuration](#configuration)
+  * [Running Migrations](#running-migrations)
+  * [Starting the Services](#starting-the-services)
+* [Usage](#usage)
+* [Project Structure](#project-structure)
+* [Limitations & Future Work](#limitations--future-work)
+* [Contributing](#contributing)
+* [License](#license)
+* [Acknowledgements](#acknowledgements)
+
+## Features
+
+* **Schema-per-Tenant Isolation**: Each tenant has its own PostgreSQL schema, ensuring strong data separation without separate databases.
+* **Dynamic Schema Management**: Runtime creation and migration of tenant schemas via MikroORM.
+* **API Gateway**: Centralized gateway for authentication (JWT), schema-based routing, and logging.
+* **Microservice Monorepo**: Modular design with shared libraries for logging, error handling, and DTO definitions.
+  
+## Architecture
+
+1. **API Gateway**: Handles client HTTP/gRPC requests, performs JWT authentication, extracts the `x-tenant` header (or metadata), and routes to the appropriate microservice over TCP.
+2. **TenantConnectionManagerService**: Caches and manages database connections per schema, creating new connections on demand.
+3. **SchemaContextInterceptor**: Injects the correct MikroORM `EntityManager` for the current tenant before controller execution.
+4. **Microservices**: Each service (e.g., `resido-app`) lives under `apps/`, using shared libraries (`libs/`) for common concerns.
+5. **Migrations Pipeline**: Separate migration flows for the `public` schema (global metadata) and tenant schemas, with advisory locks to prevent concurrent conflicts.  
+
+## Technology Stack
+
+* **NestJS** for backend framework and microservice support.
+* **PostgreSQL** with schema-based multi-tenancy.
+* **MikroORM** for dynamic schema migrations and entity management.
+* **gRPC/TCP** for inter-service communication.
+* **Winston** (via `winston-daily-rotate-file`) for production logging, and console color logs in development.
+
+## Getting Started
+
+### Prerequisites
+
+* Node.js (>= 18.x) and npm or Yarn
+* PostgreSQL (>= 16.x)
+
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/VeroniccaStrand/resido-monorepo.git
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   # or yarn install
+   ```
+
+### Configuration
+
+Copy the example environment file and update credentials:
 
 ```bash
-$ npm install
+cp .env.example .env
+# Edit `.env` to set your DB connection, JWT secrets, and any migration settings (e.g. number of concurrent schema migrations, advisory lock timeouts, log level, specific tenant to migrate) via environment variables. citeturn1file0
 ```
 
-## Compile and run the project
+### Running Migrations
 
+#### Public Schema
+
+MikroORM’s built-in CLI handles all migrations against the public schema directly on the TypeScript source files:
+
+1. **Initial Migration** (only the first time):  
+   ```bash
+   npm run migration:create:public -- --initial --name=init   # creates a baseline migration without history
+   npm run migrations:up:public                               # applies all pending migrations to the public schema
+   ```
+Tenant Schemas
+
+Tenant migrations are executed automatically at service startup based on environment variables, without manual npm commands.
+
+Initial Migration TemplateSpecify a temporary schema (e.g., tenant_template) in your mikro-orm-tenant.config.ts and create the first, initial migration:
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run migration:create:tenant -- --initial --name=init_tenant_template   # generates baseline for the tenant schema
+npm run migrations:up:tenant                                               # applies that initial migration
 ```
+Adjust the MigrationRemove the schema setting from the configuration and edit the generated migration file so it becomes schema‑agnostic.
 
-## Run tests
+Compile Migrations
 
+npm run build:migrations      # compiles `.ts` files to `.js` in `compiled-migrations/`
+
+Startup‑Driven Tenant MigrationsWhen the application starts, it reads the following environment variables and applies pending migrations for each tenant schema automatically:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+RUN_MIGRATIONS=false => true = Restart app and migrations starts from main.ts
+TENANT_MIGRATE_CONCURRENCY (number of concurrent migrations)
+TENANT_MIGRATE_TIMEOUT (timeout for advisory locks)
+TENANT_MIGRATE_LOG=true (enable detailed logging of each step)
+TENANT_MIGRATE_TENANT_ID=<specific tenant ID>
 ```
 
-## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Starting the Services
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+* **Start all services**
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+  ```bash
+  npm run start:dev:all
+  ```
 
-## Resources
 
-Check out a few resources that may come in handy when working with NestJS:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Usage
 
-## Support
+* **Creating a Tenant**: Issue a request to the gateway endpoint responsible for tenant provisioning. A new schema and initial migration will be applied automatically, and a signup token will be generated in the public schema.
+* **Authenticated Requests**: Include your JWT in the `Authorization` header.
+* **Observability**: Logs include tenant, method, and response time for easy per-tenant tracing.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Project Structure
 
-## Stay in touch
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## Limitations & Future Work
+
+* No automated tests (unit/integration/load) at present.
+* CI/CD pipelines and production-ready deployment scripts are not yet implemented.
+* Frontend client (Next.js/React) is planned but not included.
+* Gateway enhancements: API key support, rate limiting, caching, real-time monitoring.
+* Security hardening: time-limited tokens, RBAC for tenant creation.
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests for features, bug fixes, or improvements.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is licensed under the MIT License. 
+
+## Acknowledgements
+
+* Veronica Strand’s thesis on schema-isolated multi-tenancy in NestJS, Teknikhögskolan 2025. 
